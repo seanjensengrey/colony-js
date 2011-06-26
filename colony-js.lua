@@ -1,3 +1,6 @@
+--https://github.com/mirven/underscore.lua/blob/master/lib/underscore.lua
+--https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/slice
+
 -- start code
 require('bit')
 
