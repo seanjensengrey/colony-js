@@ -1,16 +1,30 @@
 require('colony-js');
 
-local a = nil;
-(print)(this, ("Let's do somethng cool here."));
-a = (function (this, args)
-local x, _i, _len, _results = nil, nil, nil, nil;
-_results = _JS.arr({});
-_JS.void(({(function () local _r = 0; _i = _r; return _r end)(), (function () local _r = (args).length; _len = _r; return _r end)()})[2]);
-while (_i < _len) do
-x = (args)[_i];
-_results:push((print)(this, x));
-_JS.void(((function () local _r = _JS.add(_i, 1); _i = _r; return _r end)() - 1));
+local i = 0;
+while (i < 10) do
+local _c = true; repeat
+local _cont, _break, _e = {}, {}, nil
+local _s, _r = xpcall(function ()
+        if (i < 5) then
+return _break;
 end
-return _results;
-end);
-(a)(this, _JS.arr({[0]=5, 6, 7}));
+(print)(this, i);
+		return _cont
+    end, function (err)
+        _e = err
+    end)
+if _s == false then
+    local e = _e;
+
+end
+
+if _r == _break then
+break
+end
+if _r ~= _cont then
+        return _r
+end
+until true;
+_JS.void(((function () local _r = _JS.add(i, 1); i = _r; return _r end)() - 1));
+if not _c then break end
+end

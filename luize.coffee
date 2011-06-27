@@ -1,5 +1,26 @@
 parser = require('./parser')
+ast = require('./ast')
 fs = require('fs')
+
+# detects if "continue" is used in the current loop
+
+usesContinue = (stat) ->
+	continueWalker = (o) ->
+		switch o?[0]
+			when "while-stat", "do-while-stat", "for-stat", "for-in-stat", "label-stat", "closure-context"
+				return []
+			when "continue-stat"
+				return [true]
+			else
+				return ast.walk(o, continueWalker)
+
+	return continueWalker(stat).length > 0
+
+#
+# luize function
+# 
+
+loops = []
 
 luize = (o) ->
 	return "" if not o
@@ -14,9 +35,13 @@ luize = (o) ->
 		when "closure-context"
 			[_, ln, name, args, stats] = o
 			#TODO name?
-			return "function (#{['this'].concat(args).join(', ')})\n" +
+			loopsbkp = loops
+			loops = []
+			ret = "function (#{['this'].concat(args).join(', ')})\n" +
 				(luize(x) for x in stats).join('\n') + "\n" +
 				"end"
+			loops = loopsbkp
+			return ret
 
 		# literals
 
@@ -165,6 +190,9 @@ luize = (o) ->
 					return "#{luize(base)}[#{luize(index)}] = #{luize(expr)};"
 				when "call-expr", "static-method-call-expr"
 					return "#{luize(expr)};"
+				when "seq-expr"
+					[_, ln, pre, expr] = o
+					return luize(["expr-stat", ln, pre]) + "\n" + luize(["expr-stat", ln, expr])
 			return "_JS.void(" + luize(expr) + ");"
 		when "ret-stat"
 			[_, ln, expr] = o
@@ -175,25 +203,46 @@ luize = (o) ->
 				(if else_stat then "else\n#{luize(else_stat)}\n" else "") + "end"
 		when "while-stat"
 			[_, ln, expr, stat] = o
-			return "while #{luize(expr)} do\n#{luize(stat)}\nend"
+			l = loops.push(["while", null])-1
+			ret = "while #{luize(expr)} do\n" +
+				"local _c#{l} = true; repeat\n" +
+				"#{luize(stat)}\n" +
+				"until true;\nif not _c#{l} then break end\n" +
+				"end"
+			loops.pop()
+			return ret
 		when "do-while-stat"
 			[_, ln, expr, stat] = o
-			return "repeat\n#{luize(stat)}\nuntil not (#{luize(expr)});"
+			l = loops.push(["do", null])-1
+			ret = "repeat\n" +
+				"local _c#{l} = true; repeat\n" +
+				"#{luize(stat)}\n" +
+				"until true;\nif not _c#{l} then break end\n" +
+				"until not (#{luize(expr)});"
+			loops.pop()
+			return ret
 		when "for-stat"
 			[_, ln, init, cond, step, body] = o
 			cond = ["boolean-literal", ln, true] unless cond
-			return (if init[0] == "var-stat" then luize(init) else luize(["expr-stat", ln, init])) + "\n" +
+			l = loops.push(["for", null])-1
+			ret = (if init[0] == "var-stat" then luize(init) else luize(["expr-stat", ln, init])) + "\n" +
 				"while " + luize(cond) + " do\n" +
+				"local _c#{l} = true; repeat\n" +
 				luize(body) + "\n" +
+				"until true;\n" +
 				(if step then luize(["expr-stat", step[1], step]) + "\n" else "") +
+				"if not _c#{l} then break end\n" + 
 				"end"
+			loops.pop()
+			return ret
 		when "for-in-stat"
 			[_, ln, isvar, value, expr, stat] = o
 			return (if isvar then "local #{value};\n" else "") +
 				"for #{value},_v in pairs(#{luize(expr)}) do\n#{luize(stat)}\nend"
 		when "switch-stat"
 			[_, ln, expr, cases] = o
-			return "repeat\n" +
+			l = loops.push(["switch", null])-1
+			ret = "local _c#{l} = true; repeat\n" +
 				(luize(["var-stat", ln, ["_#{i}", v] for i, [v, _] of cases])) + "\n" +
 				(luize(["var-stat", ln, [["_r", expr]]])) + "\n" +
 				(for i, [_, stats] of cases
@@ -203,10 +252,35 @@ luize = (o) ->
 						luize(x) for x in stats
 				).join("\n") + "\n" +
 				"until true"
-		#when "throw"
-		#	[_, ln, expr] = o
-		#when "try-stat"
-		#	[_, ln, stats, catch_block, finally_stats]
+			loops.pop()
+			return ret
+		when "throw-stat"
+			[_, ln, expr] = o
+			return "error(#{luize(expr)});"
+		when "try-stat"
+			[_, ln, stats, catch_block, finally_stats] = o
+			l = loops.push(["try", null])-1
+			ret = """
+local _cont, _break, _e = {}, {}, nil
+local _s, _r = xpcall(function ()
+        #{(luize(x) for x in stats).join('\n')}
+		#{if stats[-1..][0][0] != 'ret-stat' then "return _cont" else ""}
+    end, function (err)
+        _e = err
+    end)
+if _s == false then
+    #{if catch_block then "local " + catch_block[0] + " = _e;\n" +
+      (luize(x) for x in catch_block[1]).join('\n') else ""}
+end
+#{if finally_stats then (luize(x) for x in finally_stats).join('\n') else ""}
+if _r == _break then
+#{if loops[-2..-1][0]?[1] == "try" then "return _break;" else "break" }
+end
+if _r ~= _cont then
+        return _r
+end"""
+			loops.pop()
+			return ret
 		when "var-stat"
 			[_, ln, bindings] = o
 			return "local " + (k for [k, v] in bindings).join(', ') +
@@ -215,11 +289,14 @@ luize = (o) ->
 			[_, ln, closure] = o
 			return "local #{closure[2]}; #{closure[2]} = (" + luize(closure) + ");\n"
 		when "break-stat"
-			[_, ln, label] = o
 			#TODO labels
-			return "break;"
-		#when "continue-stat"
-		#	[_, ln, label] = o
+			[_, ln, label] = o
+			l = loops.length-1; l-- while loops[l]?[0] == "try"
+			return "_c#{l} = false; " + (if loops[-1..][0][0] == "try" then "return _break;" else "break;")
+		when "continue-stat"
+			#TODO labels
+			[_, ln, label] = o
+			return (if loops[-1..][0][0] == "try" then "return _break;" else "break;")
 
 		# fallback
 
