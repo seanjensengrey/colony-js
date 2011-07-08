@@ -94,13 +94,71 @@ Statements:
 
 ast = exports
 
+class ast.Node
+	serialize: ->
+		return [@name, (@[k] for k in ast.types[@name])...]
+
+ast.types = {}
+ast.define = (name, args) ->
+	ast.types[name] = args
+
+ast.parse = (o) ->
+		
+
+#
+# contexts
+#
+
+ast.isContext = (o) -> o?[0].match(/-context$/)
+
+ast.define "script-context", ["stats"]
+ast.define "closure-context", ["name", "args", "stats"]
+
+#
+# literals
+#
+
 ast.isLiteral = (o) -> o?[0].match(/-literal$/)
+
+#
+# operations
+#
+
 ast.isOp = (o) -> o?[0].match(/-op-expr$/)
 ast.isUnaryOp = (o) -> ast.isOp(o) and o.length == 3
 ast.isBinaryOp = (o) -> ast.isOp(o) and o.length == 4
+
+#
+# expressions
+#
+
 ast.isExpr = (o) -> o?[0].match(/-expr$/)
+
+#
+# statements
+#
+
 ast.isStat = (o) -> o?[0].match(/-stat$/)
-ast.isContext = (o) -> o?[0].match(/-context$/)
+
+ast.define "block-stat", ["stats"]
+ast.define "expr-stat", ["expr"]
+ast.define "ret-stat", ["expr"]
+ast.define "if-stat", ["expr", "thenStat", "elseStat"]
+ast.define "while-stat", ["expr", "stat"]
+ast.define "do-while-stat", ["expr", "stat"]
+ast.define "for-stat", ["init", "expr", "step", "stat"]
+ast.define "for-in-stat", ["isvar", "value", "expr", "stat"]
+ast.define "switch-stat", ["expr", "cases"]
+ast.define "throw-stat", ["expr"]
+ast.define "try-stat", ["stats", "catchBlock", "finallyStats"]
+ast.define "var-stat", ["vars"]
+ast.define "defn-stat", ["closure"]
+ast.define "break-stat", ["label"]
+ast.define "continue-stat", ["label"]
+
+#
+# walker
+#
 
 ast.walk = (o, f = ast.walk) ->
 	# operations
@@ -272,40 +330,123 @@ ast.walk = (o, f = ast.walk) ->
 			return []
 
 #
-# predefined walkers
+# analysis
 #
 
-ast.strings = (o) ->
+ast.strings = (o, f = ast.strings) ->
 	switch o?[0]
 		when "str-literal"
 			[_, ln, value] = o
 			return [value]
 		else
-			return ast.walk(o, ast.strings)
+			return ast.walk(o, f)
 
-ast.numbers = (o) ->
+ast.numbers = (o, f = ast.numbers) ->
 	switch o?[0]
 		when "num-literal"
 			[_, ln, value] = o
 			return [value]
 		else
-			return ast.walk(o, ast.numbers)
+			return ast.walk(o, f)
 
-ast.regexps = (o) ->
+ast.regexps = (o, f = ast.regexps) ->
 	switch o?[0]
 		when "regexp-literal"
 			[_, ln, expr, flags] = o
 			return [[expr, flags]]
 		else
-			return ast.walk(o, ast.regexps)
+			return ast.walk(o, f)
 
-ast.contexts = (o) ->
+ast.contextStats = (ctx) ->
+	switch ctx?[0]
+		when "script-context"
+			return ctx[2]
+		when "closure-context"
+			return ctx[4]
+	return []
+
+ast.contexts = (o, f = ast.contexts) ->
 	switch o?[0]
 		when "script-context"
 			[_, ln, stats] = o
-			return [o].concat((ast.contexts(x) for x in stats)...)
+			return [o].concat((f(x) for x in stats)...)
 		when "closure-context"
 			[_, ln, name, args, stats] = o
-			return [o].concat((ast.contexts(x) for x in stats)...)
+			return [o].concat((f(x) for x in stats)...)
 		else
-			return ast.walk(o, ast.contexts)
+			return ast.walk(o, f)
+
+ast.vars = (o, f = ast.vars) ->
+	switch o?[0]
+		when "closure-context"
+			[_, ln, name, args, stats] = o
+			return (if name? then [name] else []).concat(args, (f(x) for x in stats)...)
+		when "var-stat"
+			[_, ln, vars] = o
+			return (k for [k, v] in vars).concat((f(v) for [k, v] in vars when v)...)
+		when "for-in-stat"
+			[_, ln, isvar, value, expr, stat] = o
+			return (if isvar then [value] else []).concat(f(stat))
+		when "try-stat"
+			[_, ln, stats, catch_block, finally_stats] = o
+			return (if catch_block
+					[label, stats] = catch_block
+					[label].concat((f(x) for x in stats)...)
+				else []).concat((if finally_stats then f(x) for x in finally_stats else [])...)
+		when "scope-ref-expr"
+			[_, ln, value] = o
+			return if value == "arguments" then ["arguments"] else []
+		when "defn-stat", "func-literal"
+			[_, ln, [_, ln, name, args, stats]] = o
+			return if name? then [name] else []
+		else
+			return ast.walk(o, f)
+
+ast.localVars = (o, f = ast.localVars) ->
+	switch o?[0]
+		when "script-context"
+			[_, ln, stats] = o
+			return []
+		when "closure-context"
+			[_, ln, name, args, stats] = o
+			return []
+		else
+			return ast.vars(o, f)
+
+ast.usesArguments = (closure) ->
+	return "arguments" in [].concat((ast.localVars(x) for x in ast.contextStats(closure))...)
+
+ast.localRefs = (o, f = ast.localRefs) ->
+	switch o?[0]
+		when "script-context"
+			[_, ln, stats] = o
+			return []
+		when "closure-context"
+			[_, ln, name, args, stats] = o
+			return []
+		when "scope-ref-expr"
+			[_, ln, value] = o
+			return [value]
+		when "scope-assign-expr"
+			[_, ln, value, expr] = o
+			return [value]
+		when "scope-delete-expr"
+			[_, ln, value] = o
+			return [value]
+		else
+			return ast.walk(o, f)
+
+set = (a) ->
+	o = {}; r = []
+	o[k] = true for k in a
+	r.push(k) for k, _ of o
+	return r
+
+ast.localUndeclaredRefs = (ctx) ->
+	stats = ast.contextStats(ctx)
+	refs = [].concat((ast.localRefs(x) for x in stats)...)
+	vars = [].concat((ast.localVars(x) for x in stats)...)
+	return set(k for k in refs when k not in vars)
+
+ast.undeclaredRefs = (o) ->
+	return set([].concat((ast.localUndeclaredRefs(ctx) for ctx in ast.contexts(o))...))

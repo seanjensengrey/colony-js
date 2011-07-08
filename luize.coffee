@@ -16,6 +16,12 @@ usesContinue = (stat) ->
 
 	return continueWalker(stat).length > 0
 
+fixRef = (str) ->
+	return str.replace(/_/g, '__').replace(/\$/g, '_S')
+
+isSafe = (str) ->
+	return str.indexOf("_") != -1
+
 #
 # luize function
 # 
@@ -34,12 +40,29 @@ luize = (o) ->
 			return (luize(stat) for stat in stats).join('\n')
 		when "closure-context"
 			[_, ln, name, args, stats] = o
-			#TODO name?
+
+			# fix references
+			name = fixRef(name) if name; args = (fixRef(x) for x in args)
+
+			# name argument only when necessary
+			namestr = ""
+			if name in ast.undeclaredRefs(o)
+				namestr = "local #{name} = debug.getinfo(1, 'f').func;\n"
+
 			loopsbkp = loops
 			loops = []
-			ret = "function (#{['this'].concat(args).join(', ')})\n" +
-				(luize(x) for x in stats).join('\n') + "\n" +
-				"end"
+			if ast.usesArguments(o)
+				ret = "function (this, ...)\n" + namestr +
+					"local arguments = _JS.arr((function (...) return arg; end)(...));\n" +
+					(if args.length
+						"local #{args.join(', ')} = ...;\n"
+					else "") +
+					(luize(x) for x in stats).join('\n') + "\n" +
+					"end"
+			else
+				ret = "function (#{['this'].concat(args).join(', ')})\n" + namestr +
+					(luize(x) for x in stats).join('\n') + "\n" +
+					"end"
 			loops = loopsbkp
 			return ret
 
@@ -122,9 +145,11 @@ luize = (o) ->
 			return "this"
 		when "scope-ref-expr"
 			[_, ln, value] = o
-			return value
+			return fixRef(value)
 		when "static-ref-expr"
 			[_, ln, base, value] = o
+			if not isSafe(value)
+				return luize(["dyn-ref-expr", ln, base, ["str-literal", ln, value]])
 			return "(#{luize(base)}).#{value}"
 		when "dyn-ref-expr"
 			[_, ln, base, expr] = o
@@ -140,6 +165,8 @@ luize = (o) ->
 			return luize(["scope-assign-expr", ln, value, ["undef-literal", ln]])
 		when "static-delete-expr"
 			[_, ln, base, value]
+			if not isSafe(value)
+				return luize(["dyn-delete-expr", ln, base, ["str-literal", ln, value]])
 			return luize(["static-assign-expr", ln, base, value, ["undef-literal", ln]])
 		when "dyn-delete-expr"
 			[_, ln, base, index] = o
@@ -153,9 +180,11 @@ luize = (o) ->
 				["this"].concat(luize(x) for x in args).join(', ') + ")"
 		when "scope-assign-expr"
 			[_, ln, value, expr] = o
-			return "(function () local _r = #{luize(expr)}; #{value} = _r; return _r end)()"
+			return "(function () local _r = #{luize(expr)}; #{fixRef(value)} = _r; return _r end)()"
 		when "static-assign-expr"
 			[_, ln, base, value, expr] = o
+			if not isSafe(value)
+				return luize(["dyn-assign-expr", ln, base, ["str-literal", ln, value]])
 			return "(function () local _r = #{luize(expr)}; #{luize(base)}.#{value} = _r; return _r end)()"
 		when "dyn-assign-expr"
 			[_, ln, base, index, expr] = o
@@ -203,35 +232,41 @@ luize = (o) ->
 				(if else_stat then "else\n#{luize(else_stat)}\n" else "") + "end"
 		when "while-stat"
 			[_, ln, expr, stat] = o
-			l = loops.push(["while", null])-1
+			inner = usesContinue(stat)
+			loops.push(["while", null, inner])
+			name = ""
 			ret = "while #{luize(expr)} do\n" +
-				"local _c#{l} = true; repeat\n" +
+				(if inner then "local _c#{name} = true; repeat\n" else "") +
 				"#{luize(stat)}\n" +
-				"until true;\nif not _c#{l} then break end\n" +
+				(if inner then "until true;\nif not _c#{name} then break end\n" else "") +
 				"end"
 			loops.pop()
 			return ret
 		when "do-while-stat"
 			[_, ln, expr, stat] = o
-			l = loops.push(["do", null])-1
+			inner = usesContinue(stat)
+			loops.push(["do", null, inner])
+			name = ""
 			ret = "repeat\n" +
-				"local _c#{l} = true; repeat\n" +
+				(if inner then "local _c#{name} = true; repeat\n" else "") +
 				"#{luize(stat)}\n" +
-				"until true;\nif not _c#{l} then break end\n" +
+				(if inner then "until true;\nif not _c#{name} then break end\n" else "") +
 				"until not (#{luize(expr)});"
 			loops.pop()
 			return ret
 		when "for-stat"
 			[_, ln, init, cond, step, body] = o
 			cond = ["boolean-literal", ln, true] unless cond
-			l = loops.push(["for", null])-1
+			inner = usesContinue(stat)
+			loops.push(["for", null, inner])
+			name = ""
 			ret = (if init[0] == "var-stat" then luize(init) else luize(["expr-stat", ln, init])) + "\n" +
 				"while " + luize(cond) + " do\n" +
-				"local _c#{l} = true; repeat\n" +
+				(if inner then "local _c#{name} = true; repeat\n" else "") +
 				luize(body) + "\n" +
-				"until true;\n" +
+				(if inner then "until true;\n" else "") +
 				(if step then luize(["expr-stat", step[1], step]) + "\n" else "") +
-				"if not _c#{l} then break end\n" + 
+				(if inner then "if not _c#{name} then break end\n" else "") + 
 				"end"
 			loops.pop()
 			return ret
@@ -241,8 +276,8 @@ luize = (o) ->
 				"for #{value},_v in pairs(#{luize(expr)}) do\n#{luize(stat)}\nend"
 		when "switch-stat"
 			[_, ln, expr, cases] = o
-			l = loops.push(["switch", null])-1
-			ret = "local _c#{l} = true; repeat\n" +
+			loops.push(["switch", null, false])-1
+			ret = "repeat\n" +
 				(luize(["var-stat", ln, ["_#{i}", v] for i, [v, _] of cases])) + "\n" +
 				(luize(["var-stat", ln, [["_r", expr]]])) + "\n" +
 				(for i, [_, stats] of cases
@@ -287,7 +322,7 @@ end"""
 				" = " + ((if v then luize(v) else "nil") for [k, v] in bindings).join(', ') + ";"
 		when "defn-stat"
 			[_, ln, closure] = o
-			return "local #{closure[2]}; #{closure[2]} = (" + luize(closure) + ");\n"
+			return "local #{fixRef(closure[2])}; #{fixRef(closure[2])} = (" + luize(closure) + ");\n"
 		when "break-stat"
 			#TODO labels
 			[_, ln, label] = o

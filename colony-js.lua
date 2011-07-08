@@ -1,34 +1,40 @@
---https://github.com/mirven/underscore.lua/blob/master/lib/underscore.lua
---https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/slice
+--[[
+References:
+  https://github.com/mirven/underscore.lua/blob/master/lib/underscore.lua
+  https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/slice
+]]--
 
--- start code
 require('bit')
 
+-- global object to prevent conflicts
+
 _JS = {}
+
+-- void function for expression statements (which lua disallows)
+
 _JS.void = function () end
+
+-- null object (different from undefined)
+
 _JS.null = {}
+
+-- "add" function to rectify lua's distinction of adding vs concatenation
+
+_JS.add = function (a, b)
+	if type(a) == "string" or type(b) == "string" then
+		return a .. b
+	else
+		return a + b
+	end
+end
+
+-- typeof operator
 
 _JS.typeof = type
 
-_JS.add = function (a, b)
-if type(a) == "string" or type(b) == "string" then
-return a .. b
-else
-return a + b
-end
-end
+-- debug.setmetatable to give all functions a prototype
 
-_JS.func_proto = {
-	call = function (func, ths, ...)
-		return func(ths, ...)
-	end,
-	apply = function (func, ths, args)
-		-- copy args to new args array
-		local luargs = {}
-		for i=0,args.length-1 do luargs[i+1] = args[i] end
-		return func(ths, unpack(luargs))
-	end
-}
+_JS.func_proto = {}
 _JS.luafunctor = function (f)
 	return (function (this, ...) return f(...) end)
 end
@@ -46,11 +52,9 @@ debug.setmetatable((function () end), {
 	end
 })
 
-_JS.obj_proto = {
-	hasInstance = function (ths, p)
-		return toboolean(rawget(ths, p))
-	end
-}
+-- object prototype and constructor
+
+_JS.obj_proto = {}
 _JS.object = function (o)
 	local mt = getmetatable(o) or {}
 	mt.__index = _JS.obj_proto
@@ -59,38 +63,19 @@ _JS.object = function (o)
 end
 _JS.object(_JS.func_proto)
 
-_JS.num_proto = _JS.object({
-	toFixed = function (num, n)
-		return tostring(num)
-	end
-})
+-- debug.setmetatable to give all numbers a prototype
+
+_JS.num_proto = _JS.object({})
 debug.setmetatable(0, {__index=_JS.num_proto})
 
-_JS.bool_proto = _JS.object({
-})
+-- debug.setmetatable to give all booleans a prototype
+
+_JS.bool_proto = _JS.object({})
 debug.setmetatable(true, {__index=_JS.bool_proto})
 
-_JS.str_proto = _JS.object({
-	charCodeAt = function (str, i, a)
-		return string.byte(str, i+1)
-	end,
-	charAt = function (str, i)
-		return string.sub(str, i+1, i+1)
-	end,
-	substr = function (str, i)
-		return string.sub(str, i+1)
-	end,
-	toLowerCase = function (str)
-		return string.lower(str)
-	end,
-	toUpperCase = function (str)
-		return string.upper(str)
-	end,
-	indexOf = function (str, needle)
-		local ret = string.find(str, needle, 1, true) 
-		if ret == null then return -1; else return ret - 1; end
-	end
-})
+-- give all strings a prototype
+
+_JS.str_proto = _JS.object({})
 _JS.rawstring = string
 getmetatable("").__index = function (str, p)
 	if (p == "length") then
@@ -102,45 +87,9 @@ getmetatable("").__index = function (str, p)
 	end
 end
 
-_JS.arr_proto = _JS.object({
-	push = function (ths, elem)
-		return table.insert(ths, ths.length, elem)
-	end,
-	pop = function (ths)
-		return table.remove(ths, ths.length-1)
-	end,
-	shift = function (ths)
-		return table.remove(ths, 0)
-	end,
-	unshift = function (ths, elem)
-		return table.insert(ths, 0, elem)
-	end,
-	reverse = function (ths)
-		local arr = _JS.arr({})
-		for i=0,ths.length-1 do
-			arr[ths.length - 1 - i] = ths[i]
-		end
-		return arr
-	end,
-	slice = function (ths, len)
-		local arr = _JS.arr({})
-		for i=len,ths.length-1 do
-			arr:push(ths[i])
-		end
-		return arr
-	end,
+-- array prototype and constructor
 
-	concat = function (src1, src2)
-		local arr = _JS.arr({})
-		for i=0,src1.length-1 do
-			arr.push(src1[i])
-		end
-		for i=0,src2.length-1 do
-			arr.push(src2[i])
-		end
-		return arr
-	end
-})
+_JS.arr_proto = _JS.object({})
 _JS.arr_mt = {
 	__index = function (arr, p)
 	  if (p == "length") then
@@ -156,6 +105,8 @@ _JS.arr = function (a)
 	return a
 end
 
+-- "new" invocation
+
 _JS.new = function (f, ...)
 	local o = {}
 	setmetatable(o, {__index=f.prototype})
@@ -164,13 +115,109 @@ _JS.new = function (f, ...)
 	return o
 end
 
--- globals
+--[[
+Standard Library
+]]--
+
+-- number prototype
+
+_JS.num_proto.toFixed = function (num, n)
+	return tostring(num)
+end
+
+-- string prototype
+
+_JS.str_proto.charCodeAt = function (str, i, a)
+	return string.byte(str, i+1)
+end
+_JS.str_proto.charAt = function (str, i)
+	return string.sub(str, i+1, i+1)
+end
+_JS.str_proto.substr = function (str, i)
+	return string.sub(str, i+1)
+end
+_JS.str_proto.toLowerCase = function (str)
+	return string.lower(str)
+end
+_JS.str_proto.toUpperCase = function (str)
+	return string.upper(str)
+end
+_JS.str_proto.indexOf = function (str, needle)
+	local ret = string.find(str, needle, 1, true) 
+	if ret == null then return -1; else return ret - 1; end
+end
+
+-- object prototype
+
+_JS.obj_proto.hasInstance = function (ths, p)
+	return toboolean(rawget(ths, p))
+end
+
+-- function prototype
+
+_JS.func_proto.call = function (func, ths, ...)
+	return func(ths, ...)
+end
+_JS.func_proto.apply = function (func, ths, args)
+	-- copy args to new args array
+	local luargs = {}
+	for i=0,args.length-1 do luargs[i+1] = args[i] end
+	return func(ths, unpack(luargs))
+end
+
+-- array prototype
+
+_JS.arr_proto.push = function (ths, elem)
+	return table.insert(ths, ths.length, elem)
+end
+_JS.arr_proto.pop = function (ths)
+	return table.remove(ths, ths.length-1)
+end
+_JS.arr_proto.shift = function (ths)
+	local ret = ths[0]
+	ths[0] = table.remove(ths, 0)
+	return ret
+end
+_JS.arr_proto.unshift = function (ths, elem)
+	return table.insert(ths, 0, elem)
+end
+_JS.arr_proto.reverse = function (ths)
+	local arr = _JS.arr({})
+	for i=0,ths.length-1 do
+		arr[ths.length - 1 - i] = ths[i]
+	end
+	return arr
+end
+_JS.arr_proto.slice = function (ths, len)
+	local arr = _JS.arr({})
+	for i=len,ths.length-1 do
+		arr:push(ths[i])
+	end
+	return arr
+end
+_JS.arr_proto.concat = function (src1, src2)
+	local arr = _JS.arr({})
+	for i=0,src1.length-1 do
+		arr.push(src1[i])
+	end
+	for i=0,src2.length-1 do
+		arr.push(src2[i])
+	end
+	return arr
+end
+
+--[[
+Globals
+]]--
 
 _JS.global = _G
-this = _JS.global
+
+-- Object
 
 Object = {}
 Object.prototype = _JS.obj_proto
+
+-- Array
 
 Array = _JS.luafunctor(function (one, ...)
 	if #arg > 0 then
@@ -188,6 +235,8 @@ Array.isArray = _JS.luafunctor(function (arr)
 	return (getmetatable(arr) or {}) == _JS.arr_mt
 end)
 
+-- String
+
 String = _JS.luafunctor(function (str)
 	return tostring(str)
 end)
@@ -196,11 +245,15 @@ String.fromCharCode = _JS.luafunctor(function (c)
 	return _JS.rawstring.char(c)
 end)
 
+-- Math
+
 _JS.rawmath = math
 Math = _JS.object({
 	max = _JS.luafunctor(_JS.rawmath.max),
 	sqrt = _JS.luafunctor(_JS.rawmath.sqrt)
 })
+
+-- Print
 
 _JS.rawprint = print
 print = _JS.luafunctor(function (x)
@@ -212,5 +265,7 @@ print = _JS.luafunctor(function (x)
 		_JS.rawprint(x)
 	end
 end)
--- end code
-;
+
+-- setup default "this" object
+
+this = _JS.global

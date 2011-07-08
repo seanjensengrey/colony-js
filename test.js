@@ -1,8 +1,7 @@
 
-for (var i = 0; i<10; i++) {
-try {
-if (i > 5) break;
-print("apples" + i);
-} catch (e) {
-}
+var i = 0;
+while (i < 5) {
+print(i)
+i++
+continue
 }
