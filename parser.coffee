@@ -1,4 +1,4 @@
-preparser = require('./parse-js')
+preparser = require('./parser-base.js')
 
 genAst = (o) ->
 	switch o[0]
@@ -184,5 +184,5 @@ exports.parse = (str) ->
 	try
 		ast = preparser.parse(str)
 	catch e
-		return null
+		throw new Error("Parsing error!")
 	return genAst(ast)

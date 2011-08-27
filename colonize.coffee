@@ -28,7 +28,7 @@ isSafe = (str) ->
 
 loops = []
 
-luize = (o) ->
+colonize = (o) ->
 	return "" if not o
 
 	switch o[0]
@@ -344,9 +344,9 @@ end"""
 ###########################
 ###########################
 
-code = fs.readFileSync('./test.js', 'utf-8')
+code = fs.readFileSync('./bin/test.js', 'utf-8')
 
 #console.log(luize(exports.parse(code)))
 #luize(exports.parse(code))
 
-console.log("require('colony-js');\n\n" + luize(parser.parse(code)))
+console.log("require('colony-js');\n\n" + colonize(parser.parse(code)))
