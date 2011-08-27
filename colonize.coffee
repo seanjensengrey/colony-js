@@ -343,10 +343,9 @@ end"""
 ##########################
 ###########################
 ###########################
+console.log(arguments.length)
 
 code = fs.readFileSync('./bin/test.js', 'utf-8')
 
-#console.log(luize(exports.parse(code)))
-#luize(exports.parse(code))
 
 console.log("require('colony-js');\n\n" + colonize(parser.parse(code)))
