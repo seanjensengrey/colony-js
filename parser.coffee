@@ -1,6 +1,7 @@
 preparser = require('./parser-base.js')
 
 genAst = (o) ->
+	# in order of parser-base
 	switch o[0]
 		when "atom", "name"
 			[_, ln, value] = o
@@ -62,19 +63,23 @@ genAst = (o) ->
 					ln, genAst(lhs), genAst(rhs)]
 		when "unary-postfix"
 			[_, ln, op, place] = o
-			return switch op
-				when "++" then genAst(["binary", ln, "-",
-					["assign", ln, "+", place, ["num", ln, 1]], ["num", ln, 1]])
-				when "--" then genAst(["binary", ln, "+",
-					["assign", ln, "-", place, ["num", ln, 1]], ["num", ln, 1]])
+			inc = if op == "++" then 1 else -1
+			switch place[0]
+				when "name" then ["scope-inc-expr", ln, false, inc, place[2]]
+				when "dot" then ["static-inc-expr", ln, false, inc, genAst(place[2]), place[3]]
+				when "sub" then ["dyn-inc-expr", ln, false, inc, genAst(place[2]), genAst(place[3])]
 		when "unary-prefix"
 			[_, ln, op, place] = o
 			return switch op
 				when "+" then ["num-op-expr", ln, genAst(place)]
 				when "-" then ["neg-op-expr", ln, genAst(place)]
 				when "~" then ["bit-op-expr", ln, genAst(place)]
-				when "++" then genAst(["assign", ln, "+", place, ["num", ln, 1]])
-				when "--" then genAst(["assign", ln, "-", place, ["num", ln, 1]])
+				when "++", "--"
+					inc = if op == "++" then 1 else -1
+					switch place[0]
+						when "name" then ["scope-inc-expr", ln, true, inc, place[2]]
+						when "dot" then ["static-inc-expr", ln, true, inc, genAst(place[2]), place[3]]
+						when "sub" then ["dyn-inc-expr", ln, true, inc, genAst(place[2]), genAst(place[3])]
 				when "!" then ["not-op-expr", ln, genAst(place)]
 				when "void" then ["void-expr", ln, genAst(place)]
 				when "typeof" then ["typeof-expr", ln, genAst(place)]
@@ -119,8 +124,9 @@ genAst = (o) ->
 		when "stat"
 			[_, ln, form] = o
 			return ["expr-stat", ln, genAst(form)]
-		#when "label"
-		#	[_, ln, name, form] = o
+		when "label"
+			[_, ln, name, form] = o
+			return ["label-stat", ln, name, genAst(form)]
 		when "if"
 			[_, ln, test, thn, els] = o
 			return ["if-stat", ln, genAst(test), genAst(thn), if els then genAst(els) else null]
@@ -178,11 +184,11 @@ genAst = (o) ->
 					 genAst(x) for x in stats]]
 
 		else
-			console.log("[ERROR] Can't log " + o[0])
+			console.log("[ERROR] Can't generate AST for node \"#{o[0]}\"")
 
 exports.parse = (str) ->
 	try
 		ast = preparser.parse(str)
 	catch e
-		throw new Error("Parsing error!")
+		throw new Error("Parsing error: " + e)
 	return genAst(ast)

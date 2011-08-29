@@ -21,8 +21,6 @@ Literals:
 
 Operations:
 
-	post-inc-op-expr (type unary-op-expr): expr
-	pre-inc-op-expr (type unary-op-expr): expr
 	num-op-expr (type unary-op-expr): expr
 	neg-op-expr (type unary-op-expr): expr
 	not-op-expr (type unary-op-expr): expr
@@ -70,7 +68,10 @@ Expressions:
 	dyn-assign-expr (type expr): base index expr
 	typeof-expr (type expr): expr
 	void-expr (type expr): expr
-	if-expr (type expr): expr then-expr else-expr
+	if-expr (type expr): expr then-expr else-exp
+	scope-inc-expr (type expr): pre inc value
+	static-inc-expr (type expr): pre inc base value
+	dyn-inc-expr (type expr): pre inc base index
 
 Statements:
 
@@ -87,6 +88,7 @@ Statements:
 	try-stat (type stat): stats catch-block finally-stats
 	var-stat (type stat): vars 
 	defn-stat (type stat): closure
+	label-stat (type stat): name, stat
 	break-stat (type stat): label
 	continue-stat (type stat): label
 
@@ -153,6 +155,7 @@ ast.define "throw-stat", ["expr"]
 ast.define "try-stat", ["stats", "catchBlock", "finallyStats"]
 ast.define "var-stat", ["vars"]
 ast.define "defn-stat", ["closure"]
+ast.define "label-stat", ["name", "stat"]
 ast.define "break-stat", ["label"]
 ast.define "continue-stat", ["label"]
 
