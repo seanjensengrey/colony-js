@@ -1,7 +1,11 @@
-# JavaScript-to-Lua Compiler
+# Colony, a JavaScript-to-Lua Compiler
 
 A simple JavaScript-to-Lua compiler.
 
-Currently, edit test.js, and then run "coffee luize.coffee". To test, "coffee luize.coffee > test.lua && lua test.lua"
+Run "coffee colonize.coffee path/to/your/file.js > bin/output.lua".
+Then "lua bin/output.lua"
 
-Requires node.js, coffeescript, lua, and the lua bitop package.
+Requires coffeescript to run compiler.
+Lua requirements are Lua 5.1, the bitop package, and the willingness to use the debug library.
+
+Released under the MIT License.
