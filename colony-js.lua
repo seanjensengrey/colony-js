@@ -207,10 +207,10 @@ end
 _arr_proto.concat = function (src1, src2)
 	local arr = _arr({})
 	for i=0,src1.length-1 do
-		arr.push(src1[i])
+		arr:push(src1[i])
 	end
 	for i=0,src2.length-1 do
-		arr.push(src2[i])
+		arr:push(src2[i])
 	end
 	return arr
 end
@@ -220,7 +220,7 @@ _arr_proto.join = function (ths, str)
 		if not ths[i] or ths[i] == _null then _r = _r .. str
 		else _r = _r .. ths[i] .. str end
 	end
-	return _rawstring.sub(ths, 1, string.len(_r) - string.len(str))
+	return _rawstring.sub(_r, 1, string.len(_r) - string.len(str))
 end
 
 --[[
