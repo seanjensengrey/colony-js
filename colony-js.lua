@@ -4,6 +4,8 @@ References:
   https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/String/slice
 ]]--
 
+if not _JS then
+
 require('bit')
 
 -- global object to prevent conflicts
@@ -14,7 +16,7 @@ _JS = {}
 
 _void = function () end
 
--- null object (different from undefined)
+-- null object (nil is "undefined")
 
 _null = {}
 
@@ -293,4 +295,16 @@ _break = {}; _cont = {}
 
 function _truthy(o)
 	return o and o ~= 0 and o ~= ""
+end
+
+-- require function
+
+_require = require
+require = _luafunctor(_require)
+
+-- exports object
+
+_exports = {}
+exports = _exports
+
 end

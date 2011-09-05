@@ -418,4 +418,6 @@ end"""
 
 code = fs.readFileSync(process.argv[2...][0], 'utf-8')
 
-console.log("require('../res/colony-js');\n\n" + colonize(parser.parse(code)))
+console.log "(_require or require)('../colony-js');\n\n" +
+	colonize(parser.parse(code)) +
+	"\n\nreturn _exports;"
