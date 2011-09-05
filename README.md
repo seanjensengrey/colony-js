@@ -1,16 +1,18 @@
 # Colony, a JavaScript-to-Lua Compiler
 
-A simple JavaScript-to-Lua compiler.
+Colony compiles JavaScript to Lua 5.1-compatible code, using a small support library. Colony is compatible with Lua in use as extensions and as a standalone language.
 
 ## Requirements
 
-CoffeeScript is required to run compiler.  
-Lua requirements: Lua 5.1, the bitop package, and the "debug" library.
+CoffeeScript runtime is required to run the compiler.  
+Lua 5.1, the bitop package, and the "debug" library are required to run Colony-compiled scripts.  
+"colony-js.lua" is required for all compiled scripts.
 
-## Test
+## Demo
 
-Run "coffee colonize.coffee demo/binarytrees.js > demo/binarytrees.lua".
-Then "lua demo/binarytrees.lua"  
+Ensure CoffeeScript and Lua are both installed on the commandline.  
+Run "coffee colonize.coffee demo/binarytrees.js > demo/binarytrees.lua".  
+Then "lua demo/binarytrees.lua".
 
 ## Modules
 
