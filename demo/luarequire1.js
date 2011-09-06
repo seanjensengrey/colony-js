@@ -1,4 +1,4 @@
 var json = require('dkjson')
-print(json.encode.call(['apples', 'pears', 'walrus']))
+print(json.encode.call(['Works:', 'Calling', 'a', 'Lua', 'library']).join(' '))
 
-print(require('lib/luarequire2').apples)
+print(require('demo/luarequire2').apples)

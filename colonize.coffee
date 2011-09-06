@@ -41,7 +41,7 @@ truthy = (cond) ->
 	if cond?[0] in ["not-op-expr", "lt-op-expr", "lte-op-expr", "gt-op-expr", "gte-op-expr", "eq-op-expr", "eqs-op-expr", "neq-op-expr", "neqs-op-expr", "instanceof-op-expr", "in-op-expr"]
 		return colonize(cond)
 	else
-		return "_truthy(#{colonize(cond)})"
+		return "_JS._truthy(#{colonize(cond)})"
 
 #
 # colonize function
@@ -75,15 +75,15 @@ colonize = (o) ->
 			loopsbkp = loops
 			loops = []
 			if ast.usesArguments(o)
-				ret = "_func(function (this, ...)\n" + namestr +
-					"local arguments = _arr((function (...) return arg; end)(...));\n" +
+				ret = "_JS._func(function (this, ...)\n" + namestr +
+					"local arguments = _JS._arr((function (...) return arg; end)(...));\n" +
 					(if args.length
 						"local #{args.join(', ')} = ...;\n"
 					else "") +
 					(colonize(x) for x in stats).join('\n') + "\n" +
 					"end)"
 			else
-				ret = "_func(function (#{['this'].concat(args).join(', ')})\n" + namestr +
+				ret = "_JS._func(function (#{['this'].concat(args).join(', ')})\n" + namestr +
 					(colonize(x) for x in stats).join('\n') + "\n" +
 					"end)"
 			loops = loopsbkp
@@ -100,15 +100,15 @@ colonize = (o) ->
 		when "obj-literal"
 			[_, ln, props] = o
 			values = ("[\"#{k.replace('\"', '\\\"')}\"]=#{colonize(v)}" for [k, v] in props)
-			return "_object({#{values.join(', ')}})"
+			return "_JS._obj({#{values.join(', ')}})"
 		when "array-literal"
 			[_, ln, exprs] = o
-			return "_arr({})" unless exprs.length
-			return "_arr({[0]=" + [colonize(exprs[0])].concat(colonize(x) for x in exprs.slice(1)).join(', ') + "})"
+			return "_JS._arr({})" unless exprs.length
+			return "_JS._arr({[0]=" + [colonize(exprs[0])].concat(colonize(x) for x in exprs.slice(1)).join(', ') + "})"
 		when "undef-literal"
 			return "nil"
 		when "null-literal"
-			return "_null"
+			return "_JS._null"
 		when "boolean-literal"
 			[_, ln, value] = o
 			return if value then "true" else "false"
@@ -146,11 +146,11 @@ colonize = (o) ->
 
 		when "add-op-expr"
 			[op, ln, left, right] = o
-			return "_add(#{colonize(left)}, #{colonize(right)})"
+			return "_JS._add(#{colonize(left)}, #{colonize(right)})"
 
 		when "lsh-op-expr", "bit-or-op-expr"
 			[op, ln, left, right] = o
-			return "bit." + (
+			return "_JS._bit." + (
 				"lsh-op-expr": "lshift"
 				"bit-or-op-expr": "bor")[op] + "(#{colonize(left)}, #{colonize(right)})"
 
@@ -197,7 +197,7 @@ colonize = (o) ->
 			return colonize(["dyn-assign-expr", ln, base, index, ["undef-literal", ln]])
 		when "new-expr"
 			[_, ln, constructor, args] = o
-			return "_new(" + [colonize(constructor)].concat(colonize(x) for x in args).join(', ') + ")"
+			return "_JS._new(" + [colonize(constructor)].concat(colonize(x) for x in args).join(', ') + ")"
 		when "call-expr"
 			[_, ln, expr, args] = o
 			return "(" + colonize(expr) + ")(" +
@@ -215,10 +215,10 @@ colonize = (o) ->
 			return "(function () local _r = #{colonize(expr)}; #{colonize(base)}[#{colonize(index)}] = _r; return _r end)()"
 		when "typeof-expr"
 			[_, ln, expr] = o
-			return "_typeof(#{colonize(expr)})"
+			return "_JS._typeof(#{colonize(expr)})"
 		when "void-expr"
 			[_, ln, expr] = o
-			return "_void(#{colonize(expr)})"
+			return "_JS._void(#{colonize(expr)})"
 		when "if-expr"
 			[_, ln, expr, then_expr, else_expr] = o
 			return "(#{colonize(expr)} and {#{colonize(then_expr)}} or {#{colonize(else_expr)}})[1]"
@@ -277,13 +277,13 @@ colonize = (o) ->
 				when "seq-expr"
 					[_, ln, pre, expr] = expr
 					return colonize(["expr-stat", ln, pre]) + "\n" + colonize(["expr-stat", ln, expr])
-			return "_void(" + colonize(expr) + ");"
+			return "_JS._void(" + colonize(expr) + ");"
 		when "ret-stat"
 			[_, ln, expr] = o
 			return "return" + (if expr then " " + colonize(expr) else "") + ";"
 		when "if-stat"
 			[_, ln, expr, then_stat, else_stat] = o
-			return "if _truthy(#{colonize(expr)}) then\n#{colonize(then_stat)}\n" +
+			return "if _JS._truthy(#{colonize(expr)}) then\n#{colonize(then_stat)}\n" +
 				(if else_stat then "else\n#{colonize(else_stat)}\n" else "") + "end"
 
 		# loops
@@ -297,7 +297,7 @@ colonize = (o) ->
 			ret = "while #{truthy(expr)} do\n" +
 				(if cont then "local _c#{name} = nil; repeat\n" else "") +
 				"#{colonize(stat)}\n" +
-				(if cont then "until true;\nif _c#{name} == _break #{[''].concat(ascend).join(' or _c')} then break end\n" else "") +
+				(if cont then "until true;\nif _c#{name} == _JS._break #{[''].concat(ascend).join(' or _c')} then break end\n" else "") +
 				"end\n" +
 				(if ascend.length then "if _c#{ascend.join(' or _c')} then break end\n" else '')
 			loops.pop()
@@ -311,7 +311,7 @@ colonize = (o) ->
 			ret = "repeat\n" +
 				(if cont then "local _c#{name} = nil; repeat\n" else "") +
 				"#{colonize(stat)}\n" +
-				(if cont then "until true;\nif _c#{name} == _break #{ascend} then break end\n" else "") +
+				(if cont then "until true;\nif _c#{name} == _JS._break #{ascend} then break end\n" else "") +
 				"until not #{truthy(expr)};"
 			loops.pop()
 			return ret
@@ -328,8 +328,8 @@ colonize = (o) ->
 				colonize(body) + "\n" +
 				(if cont then "until true;\n" else "") +
 				(if step then colonize(["expr-stat", step[1], step]) + "\n" else "") +
-				# _cname = _break OR ANYTHING ABOVE IT ~= nil then...
-				(if cont then "if _c#{name} == _break #{ascend} then break end\n" else "") + 
+				# _cname = _JS._break OR ANYTHING ABOVE IT ~= nil then...
+				(if cont then "if _c#{name} == _JS._break #{ascend} then break end\n" else "") + 
 				"end"
 			loops.pop()
 			return ret
@@ -361,10 +361,10 @@ colonize = (o) ->
 			[_, ln, stats, catch_block, finally_stats] = o
 			l = loops.push(["try", null])-1
 			ret = """
-local _cont, _break, _e = {}, {}, nil
+local _e = nil
 local _s, _r = xpcall(function ()
         #{(colonize(x) for x in stats).join('\n')}
-		#{if stats[-1..][0][0] != 'ret-stat' then "return _cont" else ""}
+		#{if stats[-1..][0][0] != 'ret-stat' then "return _JS._cont" else ""}
     end, function (err)
         _e = err
     end)
@@ -372,9 +372,9 @@ if _s == false then
     #{if catch_block then "local " + catch_block[0] + " = _e;\n" +
       (colonize(x) for x in catch_block[1]).join('\n') else ""}
 #{if finally_stats then (colonize(x) for x in finally_stats).join('\n') else ""}
-elseif _r == _break then
-#{if loops[-2..-1][0]?[1] == "try" then "return _break;" else "break" }
-elseif _r ~= _cont then
+elseif _r == _JS._break then
+#{if loops[-2..-1][0]?[1] == "try" then "return _JS._break;" else "break" }
+elseif _r ~= _JS._cont then
         return _r
 end"""
 			loops.pop()
@@ -396,14 +396,14 @@ end"""
 		when "break-stat"
 			[_, ln, label] = o
 			label = label or (x for x in loops when loops[0] != 'try')[-1..][0]?[1] or ""
-			return "_c#{label} = _break; " +
-				(if loops[-1..][0][0] == "try" then "return _break;" else "break;")
+			return "_c#{label} = _JS._break; " +
+				(if loops[-1..][0][0] == "try" then "return _JS._break;" else "break;")
 		when "continue-stat"
 			#TODO _c down the stack is false until the main one
 			[_, ln, label] = o
 			label = label or (x for x in loops when loops[0] != 'try')[-1..][0]?[1] or ""
-			return "_c#{label} = _cont; " +
-				(if loops[-1..][0][0] == "try" then "return _break;" else "break;")
+			return "_c#{label} = _JS._cont; " +
+				(if loops[-1..][0][0] == "try" then "return _JS._break;" else "break;")
 
 		# fallback
 
@@ -418,6 +418,14 @@ end"""
 
 code = fs.readFileSync(process.argv[2...][0], 'utf-8')
 
-console.log "(_require or require)('../colony-js');\n\n" +
-	colonize(parser.parse(code)) +
-	"\n\nreturn _exports;"
+mask = ['string', 'math']
+locals = ['this', 'Object', 'Array', 'String', 'Math', 'require', 'print']
+
+console.log "local _JS = require('../colony-js');"
+console.log "local #{mask.join(', ')} = #{('nil' for k in mask).join(', ')};"
+console.log "local #{locals.join(', ')} = #{('_JS.'+k for k in locals).join(', ')};"
+console.log "local _exports = {}; local exports = _exports;"
+console.log ""
+console.log colonize(parser.parse(code))
+console.log ""
+console.log "return _exports;"

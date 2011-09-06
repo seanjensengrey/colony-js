@@ -96,7 +96,7 @@ Statements:
 
 ast = exports
 
-class ast.Node
+ast.Node = class Node
 	serialize: ->
 		return [@name, (@[k] for k in ast.types[@name])...]
 
@@ -104,8 +104,7 @@ ast.types = {}
 ast.define = (name, args) ->
 	ast.types[name] = args
 
-ast.parse = (o) ->
-		
+ast.load = (o) ->		
 
 #
 # contexts
@@ -142,22 +141,22 @@ ast.isExpr = (o) -> o?[0].match(/-expr$/)
 
 ast.isStat = (o) -> o?[0].match(/-stat$/)
 
-ast.define "block-stat", ["stats"]
-ast.define "expr-stat", ["expr"]
-ast.define "ret-stat", ["expr"]
-ast.define "if-stat", ["expr", "thenStat", "elseStat"]
-ast.define "while-stat", ["expr", "stat"]
-ast.define "do-while-stat", ["expr", "stat"]
-ast.define "for-stat", ["init", "expr", "step", "stat"]
-ast.define "for-in-stat", ["isvar", "value", "expr", "stat"]
-ast.define "switch-stat", ["expr", "cases"]
-ast.define "throw-stat", ["expr"]
-ast.define "try-stat", ["stats", "catchBlock", "finallyStats"]
-ast.define "var-stat", ["vars"]
-ast.define "defn-stat", ["closure"]
-ast.define "label-stat", ["name", "stat"]
-ast.define "break-stat", ["label"]
-ast.define "continue-stat", ["label"]
+ast.define "block-stat", stats: Array(Node)
+ast.define "expr-stat", expr: Node
+ast.define "ret-stat", expr: Node
+ast.define "if-stat", expr: Node, thenStat: Node, elseStat: Node
+ast.define "while-stat", expr: Node, stat: Node
+ast.define "do-while-stat", expr: Node, stat: Node
+ast.define "for-stat", init: Node, expr: Node, step: Node, stat: Node
+ast.define "for-in-stat", isvar: Boolean, value: String, expr: Node, stat: Node
+ast.define "switch-stat", expr: Node, cases: Array(Array(Node, Node))
+ast.define "throw-stat", expr: Node
+ast.define "try-stat", tryStats: Array(Node), catchStats: Array(String, Node), finallyStats: Array(Node)
+ast.define "var-stat", vars: Array(Array(String, Node))
+ast.define "defn-stat", closure: Node
+ast.define "label-stat", name: String, stat: Node
+ast.define "break-stat", label: String
+ast.define "continue-stat", label: String
 
 #
 # walker

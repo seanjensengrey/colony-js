@@ -145,7 +145,7 @@ genAst = (o) ->
 		#	[_, ln] = o
 		when "try"
 			[_, ln, body, ctch, fnlly] = o
-			return ["try-stat", ln, genAst(x) for x in body,
+			return ["try-stat", ln, (genAst(x) for x in body),
 				(if ctch
 					[label, stats] = ctch
 					[label, genAst(x) for x in stats]),
