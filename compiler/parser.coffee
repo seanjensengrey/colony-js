@@ -120,6 +120,7 @@ genAst = (o) ->
 			return ["script-context", ln, genAst(x) for x in stats]
 		when "block"
 			[_, ln, stats] = o
+			stats = stats or []
 			return ["block-stat", ln, genAst(x) for x in stats]
 		when "stat"
 			[_, ln, form] = o

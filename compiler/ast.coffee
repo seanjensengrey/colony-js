@@ -141,22 +141,52 @@ ast.isExpr = (o) -> o?[0].match(/-expr$/)
 
 ast.isStat = (o) -> o?[0].match(/-stat$/)
 
-ast.define "block-stat", stats: Array(Node)
-ast.define "expr-stat", expr: Node
-ast.define "ret-stat", expr: Node
-ast.define "if-stat", expr: Node, thenStat: Node, elseStat: Node
-ast.define "while-stat", expr: Node, stat: Node
-ast.define "do-while-stat", expr: Node, stat: Node
-ast.define "for-stat", init: Node, expr: Node, step: Node, stat: Node
-ast.define "for-in-stat", isvar: Boolean, value: String, expr: Node, stat: Node
-ast.define "switch-stat", expr: Node, cases: Array(Array(Node, Node))
-ast.define "throw-stat", expr: Node
-ast.define "try-stat", tryStats: Array(Node), catchStats: Array(String, Node), finallyStats: Array(Node)
-ast.define "var-stat", vars: Array(Array(String, Node))
-ast.define "defn-stat", closure: Node
-ast.define "label-stat", name: String, stat: Node
-ast.define "break-stat", label: String
-ast.define "continue-stat", label: String
+ast.define "block-stat",
+	stats: Array(Node)
+ast.define "expr-stat",
+	expr: Node
+ast.define "ret-stat",
+	expr: Node
+ast.define "if-stat",
+	expr: Node
+	thenStat: Node
+	elseStat: Node
+ast.define "while-stat",
+	expr: Node
+	stat: Node
+ast.define "do-while-stat",
+	expr: Node
+	stat: Node
+ast.define "for-stat",
+	init: Node
+	expr: Node
+	step: Node
+	stat: Node
+ast.define "for-in-stat",
+	isvar: Boolean
+	value: String
+	expr: Node
+	stat: Node
+ast.define "switch-stat",
+	expr: Node
+	cases: Array(Array(Node, Node))
+ast.define "throw-stat",
+	expr: Node
+ast.define "try-stat",
+	tryStats: Array(Node)
+	catchStats: Array(String, Node)
+	finallyStats: Array(Node)
+ast.define "var-stat",
+	vars: Array(Array(String, Node))
+ast.define "defn-stat",
+	closure: Node
+ast.define "label-stat",
+	name: String
+	stat: Node
+ast.define "break-stat",
+	label: String
+ast.define "continue-stat",
+	label: String
 
 #
 # walker
@@ -178,10 +208,10 @@ ast.walk = (o, f = ast.walk) ->
 
 		when "script-context"
 			[_, ln, stats] = o
-			return f(x) for x in stats
+			return [].concat((f(x) for x in stats)...)
 		when "closure-context"
 			[_, ln, name, args, stats] = o
-			return f(x) for x in stats
+			return [].concat((f(x) for x in stats)...)
 
 		# literals
 
@@ -205,10 +235,10 @@ ast.walk = (o, f = ast.walk) ->
 			return []
 		when "array-literal"
 			[_, ln, exprs] = o
-			return f(x) for x in exprs
+			return [].concat((f(x) for x in exprs)...)
 		when "obj-literal"
 			[_, ln, props] = o
-			return f(v) for [k, v] in props
+			return [].concat((f(v) for [k, v] in props)...)
 		when "func-literal"
 			[_, ln, closure] = o
 			return f(closure)
@@ -398,7 +428,7 @@ ast.vars = (o, f = ast.vars) ->
 		when "scope-ref-expr"
 			[_, ln, value] = o
 			return if value == "arguments" then ["arguments"] else []
-		when "defn-stat", "func-literal"
+		when "defn-stat"
 			[_, ln, [_, ln, name, args, stats]] = o
 			return if name? then [name] else []
 		else

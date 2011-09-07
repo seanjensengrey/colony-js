@@ -445,7 +445,7 @@ code = fs.readFileSync(process.argv[2...][0], 'utf-8')
 mask = ['string', 'math']
 locals = ['this', 'Object', 'Array', 'String', 'Math', 'require', 'print']
 
-console.log "local _JS = require('../lib/colony-js');"
+console.log "local _JS = require('../colony-js');"
 console.log "local #{mask.join(', ')} = #{('nil' for k in mask).join(', ')};"
 console.log "local #{locals.join(', ')} = #{('_JS.'+k for k in locals).join(', ')};"
 console.log "local _exports = {}; local exports = _exports;"

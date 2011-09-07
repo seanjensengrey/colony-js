@@ -49,9 +49,9 @@ Interop with other JavaScript modules works a la CommonJS through the `require` 
 
 Interop between JavaScript and Lua works with some caveats:
 
-* Function calls in JavaScript pass the `this` object as the first parameter. To call a native Lua function, this cleanly maps to: `func.call(arg0, arg1, arg2)`
+* Function calls in JavaScript pass the `this` object as the first parameter. To call a native Lua function from JavaScript, pass your first argument as the `this` parameter: `func.call(arg0, arg1, arg2)`
 * `object.method(arg0, arg1)` in JavaScript maps to `object:method(arg0, arg1)` in Lua.
-* *NOTE:* Colony utilizes the debug library to replace the metatables of functions, strings, booleans, and numbers. The latter two do not usually have metatables at all, and should not cause conflicts. Lua modules required by Colony that expect the `string` object to be the metatable of string literals (eg. `("apples"):len()`) will break. The workaround is to ensure all included code uses the methods of the native `string` object (eg. `string.len("apples")`)
+* *NOTE:* Colony uses the debug library to replace the metatables of functions, strings, booleans, and numbers. The latter two do not usually have metatables at all, and should not cause conflicts. Lua modules required by Colony that expect the `string` object to be the metatable of string literals (eg. `("apples"):len()`) will break. The workaround is to ensure all included code uses the methods of the native `string` object (eg. `string.len("apples")`)
 
 ## License
 

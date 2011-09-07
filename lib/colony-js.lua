@@ -10,7 +10,7 @@ local _JS = {}
 
 -- built-in prototypes
 
-local obj_proto, func_proto, bool_proto, num_proto, str_proto, arr_proto = {}, {}, {}, {}, {}, {}
+local obj_proto, func_proto, bool_proto, num_proto, str_proto, arr_proto, regex_proto = {}, {}, {}, {}, {}, {}, {}
 
 -- introduce metatables to built-in types using debug library:
 -- this can cause conflicts with other modules if they utilize the string prototype
@@ -111,6 +111,12 @@ end
 -- typeof operator
 
 _JS._typeof = type
+
+-- instanceof
+
+_JS._instanceof = function ()
+	return true
+end
 
 -- "new" invocation
 
@@ -296,6 +302,17 @@ _JS.require = luafunctor(require)
 -- bitop library
 
 _JS._bit = require('bit')
+
+-- regexp library
+
+local f, rex = pcall(require, 'rex_pcre')
+if f then
+	_JS.Regexp = luafunctor(function (pat, flags)
+		local r = rex.new(tostring(pat))
+		setmetatable(r, regex_proto)
+		return r
+	end)
+end
 
 -- return namespace
 
