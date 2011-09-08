@@ -30,7 +30,7 @@ Ensure CoffeeScript and Lua are both installed on the commandline.
     git clone git://github.com/timcameronryan/colony-js.git
     cd colony-js
     coffee colonize.coffee demo/binarytrees.js > demo/binarytrees.lua
-    lua demo/binarytrees.lua
+    lua -e 'package.path=package.path..";lib/?.lua"' demo/binarytrees.lua
 
 ## Requirements
 
@@ -41,7 +41,7 @@ For the compiler:
 
 For compiled code:
 
-* "colony-js.lua" is a required library for all compiled scripts.
+* "lib/colony-js.lua" is a required library for all compiled scripts.
 
 ## JavaScript and Lua Interop
 
