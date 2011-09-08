@@ -10,7 +10,7 @@ Colony lets you use the Lua runtime with JS's familiar syntax. Let's start with 
 
 Compiled with Colony to Lua:
 
-    local _JS = require('../colony-js');
+    local _JS = require('colony-js');
     local string, math = nil, nil;
     local this, Object, Array, String, Math, require, print = _JS.this, _JS.Object, _JS.Array, _JS.String, _JS.Math, _JS.require, _JS.print;
     local _exports = {}; local exports = _exports;
@@ -19,13 +19,13 @@ Compiled with Colony to Lua:
     
     return _exports;
 
-Verbose! But let's break down the output: the first segment loads `colony-js.lua`, our JavaScript support library. Then we set up our global aliases to Java constructors and our `exports` object. The next segment is our translated code: we use the JavaScript built-in `print` function (with an implicit `this` variable), construct a few 0-indexed arrays, concatenate and join just as we could in Lua. 
+Verbose? Let's break down the output: the first segment loads `colony-js.lua`, our JavaScript support library. Then we set up our global aliases to Java constructors and our `exports` object. The next segment is our translated code: we use the JavaScript built-in `print` function (with an implicit `this` variable), construct a few 0-indexed arrays, concatenate and join just as we could in Lua. 
 
 This works with much larger examples, provided in the `demo/` directory.
 
 ## Getting Started
 
-Ensure CoffeeScript and Lua are both installed on the commandline.  
+Ensure CoffeeScript and Lua 5.1.x are both installed on the commandline.  
 
     git clone git://github.com/timcameronryan/colony-js.git
     cd colony-js
@@ -43,15 +43,18 @@ For compiled code:
 
 * "lib/colony-js.lua" is a required library for all compiled scripts.
 
-## JavaScript and Lua Interop
+## JavaScript Interop
 
-Interop with other JavaScript modules works a la CommonJS through the `require` function (which adopts the semantics of the corresponding Lua function).
+Interop with other JavaScript modules works a la CommonJS through the global `require` function. Note that any JavaScript modules that are required must also have been compiled with colony to Lua.
 
-Interop between JavaScript and Lua works with some caveats:
+## Lua Interop
 
-* Function calls in JavaScript pass the `this` object as the first parameter. To call a native Lua function from JavaScript, pass your first argument as the `this` parameter: `func.call(arg0, arg1, arg2)`
+Interop between JavaScript and Lua works seamlessly, with some minor caveats for function invocation:
+
+* JavaScript methods compiled to Lua have an implicit `this` argument as the first parameter. Lua functions which call JavaScript function should pass a `this` object (which may be null) as the first parameter. Inversely, JavaScript calling Lua must pass the first argument as the `this` parameter; the most logical way to do this is using the `.call()` method: `func.call(arg0, arg1, arg2)`
 * `object.method(arg0, arg1)` in JavaScript maps to `object:method(arg0, arg1)` in Lua.
-* *NOTE:* Colony uses the debug library to replace the metatables of functions, strings, booleans, and numbers. The latter two do not usually have metatables at all, and should not cause conflicts. Lua modules required by Colony that expect the `string` object to be the metatable of string literals (eg. `("apples"):len()`) will break. The workaround is to ensure all included code uses the methods of the native `string` object (eg. `string.len("apples")`)
+
+*NOTE:* Colony uses the debug library to replace the intrinsic metatables of functions, strings, booleans, and numbers. This probably will not cause issues (functions, booleans, and numbers in Lua have no default metatables), except if a Lua module expects the built-in `string` object to be the metatable of string literals (eg. `("apples"):len()`). The workaround is to ensure all included code explicitly calls the methods of the `string` object (eg. `string.len("apples")`)
 
 ## License
 
