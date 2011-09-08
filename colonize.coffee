@@ -50,7 +50,7 @@ truthy = (cond) ->
 colonizeContext = (stats) ->
 	# variable declarations
 	vars = [].concat((ast.localVars(stat) for stat in stats)...)
-	ret = if vars.length then "local #{vars.join(', ')};\n" else ""
+	ret = if vars.length then "local #{(fixRef(x) for x in vars).join(', ')};\n" else ""
 
 	# hoist functions, then statements
 	funcs = (stat for stat in stats when stat[0] == 'defn-stat')
@@ -365,13 +365,13 @@ colonize = (o) ->
 			name = labels.pop() or ""
 			loops.push(["switch", name, false])
 			ret = "repeat\n" +
-				(colonize(["var-stat", ln, ["_#{i}", v] for i, [v, _] of cases])) + "\n" +
-				(colonize(["var-stat", ln, [["_r", expr]]])) + "\n" +
+				(if cases.length then ("local _#{i}#{if v then ' = ' + colonize(v) else ''}; " for i, [v, _] of cases).join('') else '') +
+				"local _r = #{colonize(expr)};\n" +
 				(for i, [_, stats] of cases
 					if _?
 						"if _r == _#{i} then\n" + (colonize(x) for x in stats).concat(if cases[Number(i)+1] and (not stats.length or stats[-1..][0][0] != "break-stat") then ["_r = _#{Number(i)+1};"] else []).join("\n") + "\nend"
 					else
-						colonize(x) for x in stats
+						(colonize(x) for x in stats).join("\n")
 				).join("\n") + "\n" +
 				"until true"
 			loops.pop()
@@ -445,7 +445,7 @@ code = fs.readFileSync(process.argv[2...][0], 'utf-8')
 mask = ['string', 'math']
 locals = ['this', 'Object', 'Array', 'String', 'Math', 'require', 'print']
 
-console.log "local _JS = require('../lib/colony-js');"
+console.log "local _JS = require('colony-js');"
 console.log "local #{mask.join(', ')} = #{('nil' for k in mask).join(', ')};"
 console.log "local #{locals.join(', ')} = #{('_JS.'+k for k in locals).join(', ')};"
 console.log "local _exports = {}; local exports = _exports;"

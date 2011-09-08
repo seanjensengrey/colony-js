@@ -159,6 +159,25 @@ str_proto.indexOf = function (str, needle)
 	local ret = string.find(str, needle, 1, true) 
 	if ret == null then return -1; else return ret - 1; end
 end
+str_proto.split = function (str, sep, max)
+	if sep == '' then return _JS._arr({}) end
+
+	local ret = {}
+	if string.len(str) > 0 then
+		max = max or -1
+
+		local i, start=1, 1
+		local first, last = string.find(str, sep, start, true)
+		while first and max ~= 0 do
+			ret[i] = string.sub(str, start, first-1)
+			i, start = i+1, last+1
+			first, last = string.find(str, sep, start, true)
+			max = max-1
+		end
+		ret[i] = string.sub(str, start)
+	end
+	return _JS._arr(ret)
+end
 
 -- object prototype
 
@@ -169,7 +188,7 @@ end
 -- function prototype
 
 func_proto.call = function (func, ths, ...)
-	return _JS._func(ths, ...)
+	return func(ths, ...)
 end
 func_proto.apply = function (func, ths, args)
 	-- copy args to new args array
@@ -241,12 +260,12 @@ _JS.Object.prototype = obj_proto
 -- Array
 
 _JS.Array = luafunctor(function (one, ...)
-	if #arg > 0 then
+	if #arg > 0 or type(one) ~= 'number' then
 		arg[0] = one
 		return _JS._arr(arg)
 	elseif one ~= nil then
 		local a = {}
-		for i=0,one-1 do a[i]=null end
+		for i=0,tonumber(one)-1 do a[i]=null end
 		return _JS._arr(a)
 	end
 	return _JS._arr({})
@@ -309,7 +328,7 @@ local f, rex = pcall(require, 'rex_pcre')
 if f then
 	_JS.Regexp = luafunctor(function (pat, flags)
 		local r = rex.new(tostring(pat))
-		setmetatable(r, regex_proto)
+		debug.setmetatable(r, regex_proto)
 		return r
 	end)
 end
