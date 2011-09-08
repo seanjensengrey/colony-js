@@ -49,10 +49,13 @@ Interop with other JavaScript modules works a la CommonJS through the global `re
 
 ## Lua Interop
 
-Interop between JavaScript and Lua works seamlessly, with some minor caveats for function invocation:
+Interop between JavaScript and Lua works seamlessly, with some caveats:
 
-* JavaScript methods compiled to Lua have an implicit `this` argument as the first parameter. Lua functions which call JavaScript function should pass a `this` object (which may be null) as the first parameter. Inversely, JavaScript calling Lua must pass the first argument as the `this` parameter; the most logical way to do this is using the `.call()` method: `func.call(arg0, arg1, arg2)`
-* `object.method(arg0, arg1)` in JavaScript maps to `object:method(arg0, arg1)` in Lua.
+1. JavaScript methods compiled to Lua have an implicit `this` argument as the first parameter.
+    * Lua functions which call JavaScript function should pass a `this` object (which may be null) as the first parameter.
+    * Inversely, JavaScript calling Lua must pass the first argument as the `this` parameter; the most logical way to do this is using the `.call()` method: `func.call(arg0, arg1, arg2)`
+    * `object.method(arg0, arg1)` in JavaScript maps to `object:method(arg0, arg1)` in Lua.
+1. Arrays in JavaScript are indexed from 0, and Lua arrays are indexed from 1. Make sure to either push a dummy element using `.shift()` when calling Lua from JavaScript, and to explicitly assign the first array element in Lua to the 0 index (eg. `{[0]='first element', 'second element', 'third...'}`)
 
 *NOTE:* Colony uses the debug library to replace the intrinsic metatables of functions, strings, booleans, and numbers. This probably will not cause issues (functions, booleans, and numbers in Lua have no default metatables), except if a Lua module expects the built-in `string` object to be the metatable of string literals (eg. `("apples"):len()`). The workaround is to ensure all included code explicitly calls the methods of the `string` object (eg. `string.len("apples")`)
 
