@@ -49,7 +49,7 @@ Interop with other JavaScript modules works a la CommonJS through the global `re
 
 ## Lua Interop
 
-Interop between JavaScript and Lua works seamlessly, with some caveats:
+Interop between JavaScript and Lua works seamlessly, as Colony compiles to pure Lua code. Be aware of language caveats:
 
 1. JavaScript methods compiled to Lua have an implicit `this` argument as the first parameter.
     * Lua functions which call JavaScript function should pass a `this` object (which may be null) as the first parameter.

@@ -16,11 +16,11 @@ local obj_proto, func_proto, bool_proto, num_proto, str_proto, arr_proto, regex_
 -- this can cause conflicts with other modules if they utilize the string prototype
 -- (or expect number/booleans to have metatables)
 
-local func_mt = {}
+local func_mt, str_mt = {}, {}
 debug.setmetatable((function () end), func_mt)
 debug.setmetatable(true, {__index=bool_proto})
 debug.setmetatable(0, {__index=num_proto})
-debug.setmetatable("", {__index=str_proto})
+debug.setmetatable("", str_mt)
 
 -- object prototype and constructor
 
@@ -61,9 +61,9 @@ func_mt.__newindex=function (t, p, v)
 	getmetatable(t)[t] = pt
 end
 
--- string prototype
+-- string metatable
 
-str_proto.__index = function (str, p)
+str_mt.__index = function (str, p)
 	if (p == "length") then
 		return string.len(str)
 	elseif (tonumber(p) == p) then
