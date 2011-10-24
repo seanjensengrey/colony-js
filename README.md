@@ -31,6 +31,7 @@ Ensure CoffeeScript and Lua 5.1.x are both installed on the commandline.
 
     git clone git://github.com/timcameronryan/colony-js.git
     cd colony-js
+    npm install jast
     coffee colonize.coffee demo/binarytrees.js > demo/binarytrees.lua
     lua -e 'package.path=package.path..";lib/?.lua"' demo/binarytrees.lua
 
