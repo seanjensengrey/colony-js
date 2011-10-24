@@ -2,6 +2,8 @@
 
 Colony compiles JavaScript to Lua 5.1-compatible code, using a small support library. Colony is compatible with Lua in use in extensions and as a standalone language.
 
+*Colony is alpha-quality.* It will run all of the examples in the `demo/` directory, but still requires development to fully support ECMAScript 5 or support large codebases (like colony itself). If you're interested in its development, contact me by email.
+
 ## What it does
 
 Colony lets you use the Lua runtime with JS's familiar syntax. Let's start with the hello world example:
@@ -61,4 +63,4 @@ Interop between JavaScript and Lua works seamlessly, as Colony compiles to pure 
 
 ## License
 
-Copyright (c) 2011. Released under the MIT License.
+Copyright (c) 2011. Released under the MIT License. `parser-base.js` courtesy UglifyJS.
