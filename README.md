@@ -1,6 +1,6 @@
 # Colony, a JavaScript-to-Lua Compiler
 
-Colony compiles JavaScript to Lua 5.1-compatible code, using a small support library. Colony is compatible with Lua in use in extensions and as a standalone language.
+Colony compiles JavaScript to Lua 5.1-compatible code, using a small support library. Colony can be used in any Lua application supporting the debug library (enabled in Lua 5.1 by default).
 
 *Colony is alpha-quality.* It will run all of the examples in the `demo/` directory, but still requires development to fully support ECMAScript 5 or support large codebases (like colony itself). If you're interested in its development, contact me by email.
 
@@ -39,13 +39,13 @@ Ensure CoffeeScript and Lua 5.1.x are both installed on the commandline.
 For the compiler:
 
 * CoffeeScript runtime is required to run the compiler.
-* Lua 5.1, the bitop package, and the "debug" library are required to run Colony-compiled scripts.
 
 For compiled code:
 
 * "lib/colony-js.lua" is a required library for all compiled scripts.
+* Lua 5.1, the `bitop` package, and the "debug" library are required to run Colony-compiled scripts.
 
-## JavaScript Interop
+## JavaScript (Colony) Interop
 
 Interop with other JavaScript modules works a la CommonJS through the global `require` function. Note that any JavaScript modules that are required must also have been compiled with colony to Lua.
 
@@ -59,7 +59,16 @@ Interop between JavaScript and Lua works seamlessly, as Colony compiles to pure 
     * `object.method(arg0, arg1)` in JavaScript maps to `object:method(arg0, arg1)` in Lua.
 1. Arrays in JavaScript are indexed from 0, and Lua arrays are indexed from 1. Make sure to either push a dummy element using `.shift()` when calling Lua from JavaScript, and to explicitly assign the first array element in Lua to the 0 index (eg. `{[0]='first element', 'second element', 'third...'}`)
 
-*NOTE:* Colony uses the debug library to replace the intrinsic metatables of functions, strings, booleans, and numbers. This probably will not cause issues (functions, booleans, and numbers in Lua have no default metatables), except if a Lua module expects the built-in `string` object to be the metatable of string literals (eg. `("apples"):len()`). The workaround is to ensure all included code explicitly calls the methods of the `string` object (eg. `string.len("apples")`)
+*NOTE:* Colony uses the debug library to replace the intrinsic metatables of functions, strings, booleans, and numbers. This probably will not cause issues (functions, booleans, and numbers in Lua have no default metatables), except if a Lua module expects the built-in `string` object to be the metatable of string literals (eg. `("apples"):len()`). The workaround is to ensure all included code explicitly calls the methods of the `string` object (eg. `string.len("apples")`). Unfortunately, this limitation extends to all code that runs in conjunction with Colony scripts (for now).
+
+## Roadmap
+
+Rough guidelines that will be followed when development continues.
+
+1. Complete ECMAScript 5 support
+1. Become self-hosting
+1. Enable easier sharing between JavaScript/Lua modules.
+1. Avoid the overriding of built-in metatables using the `debug` library (if possible)
 
 ## License
 
