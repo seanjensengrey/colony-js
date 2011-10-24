@@ -40,6 +40,7 @@ Ensure CoffeeScript and Lua 5.1.x are both installed on the commandline.
 For the compiler:
 
 * CoffeeScript runtime is required to run the compiler.
+* `jast` library from npm.
 
 For compiled code:
 
