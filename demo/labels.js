@@ -1,4 +1,3 @@
-
 var i = 0
 apples: while (i < 5) {
 	print("Level " + i)

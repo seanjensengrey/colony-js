@@ -112,7 +112,7 @@ colonize = (n) ->
 			return "(#{JSON.stringify(value)})"
 		when "obj-literal"
 			{ln, props} = n
-			values = ("[\"#{k.replace('\"', '\\\"')}\"]=#{colonize(v)}" for [k, v] in props)
+			values = ("[\"#{value.replace('\"', '\\\"')}\"]=#{colonize(expr)}" for {value, expr} in props)
 			return "_JS._obj({#{values.join(', ')}})"
 		when "array-literal"
 			{ln, exprs} = n
@@ -174,11 +174,19 @@ colonize = (n) ->
 				"neg-op-expr": "-"
 				"not-op-expr": "not")[n.type] + colonize(expr)
 
-		# expressions
+		when "typeof-op-expr"
+			{ln, expr} = n
+			return "_JS._typeof(#{colonize(expr)})"
+		when "void-op-expr"
+			{ln, expr} = n
+			return "_JS._void(#{colonize(expr)})"
 
 		when "seq-op-expr"
-			{ln, pre, expr} = n
-			return "({#{colonize(pre)}, #{colonize(expr)}})[2]"
+			{ln, left, right} = n
+			return "({#{colonize(left)}, #{colonize(right)}})[2]"
+
+		# expressions
+
 		when "this-expr"
 			return "this"
 		when "scope-ref-expr"
@@ -190,8 +198,8 @@ colonize = (n) ->
 				return colonize({type: "dyn-ref-expr", ln: ln, base: base, index: {type: "str-literal", ln: ln, value: value}})
 			return "(#{colonize(base)}).#{value}"
 		when "dyn-ref-expr"
-			{ln, base, expr} = n
-			return "(#{colonize(base)})[#{colonize(expr)}]"
+			{ln, base, index} = n
+			return "(#{colonize(base)})[#{colonize(index)}]"
 		when "static-method-call-expr"
 			{ln, base, value, args} = n
 			return "#{colonize(base)}:#{value}(" + (colonize(x) for x in args).join(', ') + ")"
@@ -230,12 +238,6 @@ colonize = (n) ->
 		when "instanceof-op-expr"
 			{ln, expr} = n
 			return "_JS._instanceof(#{colonize(expr)})"
-		when "typeof-op-expr"
-			{ln, expr} = n
-			return "_JS._typeof(#{colonize(expr)})"
-		when "void-op-expr"
-			{ln, expr} = n
-			return "_JS._void(#{colonize(expr)})"
 		when "if-expr"
 			{ln, expr, thenExpr, elseExpr} = n
 			return "(#{colonize(expr)} and {#{colonize(thenExpr)}} or {#{colonize(elseExpr)}})[1]"

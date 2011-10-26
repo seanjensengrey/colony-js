@@ -289,7 +289,8 @@ end)
 
 _JS.Math = _JS._obj({
 	max = luafunctor(math.max),
-	sqrt = luafunctor(math.sqrt)
+	sqrt = luafunctor(math.sqrt),
+	floor = luafunctor(math.floor)
 })
 
 -- Print

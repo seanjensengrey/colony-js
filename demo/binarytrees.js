@@ -28,7 +28,7 @@ function bottomUpTree(item,depth){
 
 
 var minDepth = 4;
-var n = 16;
+var n = 14;
 var maxDepth = Math.max(minDepth + 2, n);
 var stretchDepth = maxDepth + 1;
 
